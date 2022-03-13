@@ -45,7 +45,7 @@ def run_training(from_epoch = 0, weight_path=None):
         model.load_state_dict(state_dict)
 
     model.to(config.DEVICE)
-    optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
     scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, factor=0.8, patience=5, verbose=True
     )
@@ -61,7 +61,7 @@ def run_training(from_epoch = 0, weight_path=None):
             preds.extend(current)
         pprint(list(zip(test_orig_targets, preds))[:6])
         print(f"Epoch {epoch}, Train loss: {train_loss}, Val loss: {valid_loss}")
-        
+
         scheduler.step(valid_loss)
         torch.save(model.state_dict(), f"/home/hung/learn/pytorch/ctc/weights/model_{epoch}.pth")
 

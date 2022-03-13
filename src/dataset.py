@@ -29,7 +29,7 @@ class CaptchaDataset:
         
         if self.resize is not None:
             # self.resize: (h, w)
-            image.resize((self.resize[1], self.resize[0]), resample=Image.BILINEAR)
+            image = image.resize((self.resize[1], self.resize[0]), resample=Image.BILINEAR)
 
         image = np.array(image)
         augmented = self.aug(image=image)

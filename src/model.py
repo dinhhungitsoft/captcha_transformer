@@ -22,27 +22,17 @@ class CaptchaModel(nn.Module):
     
     def forward(self, images, targets=None):
         bs, c, h, w = images.size()
-        x = F.relu(self.conv_1(images))
-        # print(x.size())
-        x = self.max_pool_1(x)
-        # print(x.size())
-        x = F.relu(self.conv_2(x))
-        # print(x.size())
-        x = self.max_pool_2(x)
-        # print(x.size())
+        x = F.relu(self.conv_1(images))        
+        x = self.max_pool_1(x)        
+        x = F.relu(self.conv_2(x))        
+        x = self.max_pool_2(x)        
 
-        x = x.permute(0, 3, 1, 2)                
-        # print(x.size())
-        x = x.view(bs, x.size(1), -1)
-        # print(x.size())
+        x = x.permute(0, 3, 1, 2)                        
+        x = x.view(bs, x.size(1), -1)        
         x = self.linear_1(x)
-        x = self.drop_1(x)        
-        # print(x.size())
-
-        x, _ = self.gru(x)
-        # print(x.size())
-        x = self.output(x)
-        # print(x.size())
+        x = self.drop_1(x)                
+        x, _ = self.gru(x)        
+        x = self.output(x)        
 
         x = x.permute(1, 0, 2)
         if targets is not None:
@@ -73,5 +63,6 @@ class CaptchaModel(nn.Module):
 
 if __name__ == "__main__":
     model = CaptchaModel()    
-    image = torch.rand((1, 3, 75,300))
+    image = torch.rand((1, 3, 50,200))
     out = model(image, torch.randint(0, 1, (1, 5)))
+    print(model)
