@@ -1,0 +1,8 @@
+DATA_DIR = "./data/captcha_images_v2"
+BATCH_SIZE = 16
+IMAGE_WIDTH = 300
+IMAGE_HEIGHT = 75
+NUM_WORKERS = 4
+EPOCH = 200
+DEVICE = "cpu"
+NUM_CHARS = 62
