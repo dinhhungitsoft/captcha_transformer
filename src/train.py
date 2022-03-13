@@ -2,7 +2,7 @@ import os
 import glob
 import torch
 import numpy as np
-from sklearn import model_selection
+from sklearn import model_selection, preprocessing
 
 import config
 import dataset
@@ -14,15 +14,25 @@ from pprint import pprint
 def prepare_data():    
     image_files = glob.glob(os.path.join(config.DATA_DIR, "*.png"))
 
-    # Get labels
-    labels = [x.split("/")[-1][:-4] for x in image_files]    
+    # # Get labels
+    # labels = [x.split("/")[-1][:-4] for x in image_files]    
     
-    lbl_encoder = utils.get_lbl_encoder()
+    # lbl_encoder = utils.get_lbl_encoder()
    
-    targets_enc = [lbl_encoder.transform([c for c in item]) for item in labels]
-    targets_enc = np.array(targets_enc) + 1
+    # targets_enc = [lbl_encoder.transform([c for c in item]) for item in labels]
+    # abc = lbl_encoder.inverse_transform(np.array([49,  4,  6,  9,  9])-1)
+    # targets_enc = np.array(targets_enc)
+    # targets_enc = targets_enc + 1
 
-    # print(targets)    
+    labels = [x.split("/")[-1][:-4] for x in image_files]
+    targets = [[c for c in x] for x in labels]
+    targets_flat = [c for clist in targets for c in clist]
+
+    lbl_encoder = preprocessing.LabelEncoder()
+    lbl_encoder.fit(targets_flat)
+    targets_enc = [lbl_encoder.transform(x) for x in targets]
+    targets_enc = np.array(targets_enc)
+    targets_enc = targets_enc + 1   
 
     (train_imgs, test_imgs, train_targets, test_targets, train_orig_targets, test_orig_targets) = model_selection.train_test_split(
         image_files, targets_enc, labels, test_size=0.1, random_state=42)
@@ -39,13 +49,13 @@ def run_training(from_epoch = 0, weight_path=None):
     train_loader, test_loader, lbl_encoder, test_orig_targets = prepare_data()
 
     model = CaptchaModel()
-
+    print(model)
     if weight_path is not None:
         state_dict = torch.load(weight_path)
         model.load_state_dict(state_dict)
 
     model.to(config.DEVICE)
-    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
     scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, factor=0.8, patience=5, verbose=True
     )
@@ -57,7 +67,7 @@ def run_training(from_epoch = 0, weight_path=None):
         
         preds=[]
         for vp in valid_preds:
-            current = utils.decode_prediction(vp, lbl_encoder, keep_raw=False)
+            current = utils.decode_prediction(vp, lbl_encoder, keep_raw=True)
             preds.extend(current)
         pprint(list(zip(test_orig_targets, preds))[:6])
         print(f"Epoch {epoch}, Train loss: {train_loss}, Val loss: {valid_loss}")
