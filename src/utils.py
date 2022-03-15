@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import os
+from seq2seq import Seq2Seq
 from encoderlayers import Encoder
 from decoderlayers import Decoder
 from config import *
@@ -46,3 +47,39 @@ def prepare_data():
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=NUM_WORKERS)
 
     return train_loader, test_loader, lbl_encoder, test_orig_targets
+
+
+def initialize_weights(m):
+    if hasattr(m, 'weight') and m.weight.dim() > 1:
+        nn.init.xavier_uniform_(m.weight.data)
+        
+def build_model(weight_path=None):
+    x = torch.rand((1, 3, 200,200))    
+    enc = Encoder(INPUT_DIM, 
+              HID_DIM, 
+              ENC_LAYERS, 
+              ENC_HEADS, 
+              ENC_PF_DIM, 
+              ENC_DROPOUT, 
+              DEVICE,
+              max_length=INPUT_DIM)
+
+    dec = Decoder(OUTPUT_DIM, 
+                HID_DIM, 
+                DEC_LAYERS, 
+                DEC_HEADS, 
+                DEC_PF_DIM, 
+                DEC_DROPOUT, 
+                DEVICE,
+                max_length=OUTPUT_DIM)
+
+    SRC_PAD_IDX = 0
+    TRG_PAD_IDX = 0    
+
+    model = Seq2Seq(enc, dec, SRC_PAD_IDX, TRG_PAD_IDX, DEVICE, img_size=IMAGE_WIDTH, embedding_size=HID_DIM).to(torch.device(DEVICE))
+    if weight_path is not None:
+        state_dict = torch.load(weight_path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    else:
+        model.apply(initialize_weights)
+    return model

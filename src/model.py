@@ -1,119 +1,10 @@
 import torch.nn as nn
 import torch
-from encoderlayers import Encoder, EncoderLayer
-from decoderlayers import Decoder, DecoderLayer
 from tqdm import tqdm
 from config import *
-
+from inference import predict
+from pprint import pprint
 import torch.nn.functional as F
-
-class Seq2Seq(nn.Module):
-    def __init__(self, 
-                 encoder, 
-                 decoder, 
-                 src_pad_idx, 
-                 trg_pad_idx, 
-                 device,
-                 img_size=200,
-                 embedding_size=64):
-        super().__init__()
-
-        # Convolutions for image
-        self.conv_1 = nn.Conv2d(3, 128, kernel_size=(3, 3), padding=(1, 1))
-        self.max_pool_1 = nn.MaxPool2d(kernel_size=(2, 2))
-        self.conv_2 = nn.Conv2d(128, 64, kernel_size=(3, 3), padding=(1, 1))                
-        self.max_pool_2 = nn.MaxPool2d(kernel_size=(2, 2))
-        self.layer_norm1 = nn.LayerNorm(64)
-
-        self.linear_1 = nn.Linear(3200, embedding_size)
-        # self.drop_1 = nn.Dropout(0.2)
-        #        
-        self.encoder = encoder
-        self.decoder = decoder
-        self.src_pad_idx = src_pad_idx
-        self.trg_pad_idx = trg_pad_idx
-        self.device = device
-        
-    def make_src_mask(self, src):
-        
-        #src = [batch size, src len]
-        
-        src_mask = (src != self.src_pad_idx).unsqueeze(1).unsqueeze(2)
-
-        #src_mask = [batch size, 1, 1, src len]
-
-        return src_mask
-    
-    def make_trg_mask(self, trg):
-        
-        #trg = [batch size, trg len]
-        
-        trg_pad_mask = (trg != self.trg_pad_idx).unsqueeze(1).unsqueeze(2)
-        
-        #trg_pad_mask = [batch size, 1, 1, trg len]
-        
-        trg_len = trg.shape[1]
-        
-        trg_sub_mask = torch.tril(torch.ones((trg_len, trg_len), device = self.device)).bool()
-        
-        #trg_sub_mask = [trg len, trg len]
-            
-        trg_mask = trg_pad_mask & trg_sub_mask
-        
-        #trg_mask = [batch size, 1, trg len, trg len]
-        
-        return trg_mask
-
-    def forward(self, src, trg, trg_mask=None, is_inference=False):
-        bs = src.size(0)
-        x = F.relu(self.conv_1(src))        
-        x = self.max_pool_1(x)        
-        x = F.relu(self.conv_2(x))        
-        x = self.max_pool_2(x)        
-        
-        x = x.permute(0, 3, 1, 2)                        
-        x = x.view(bs, x.size(1), -1)        
-        x = self.linear_1(x)
-        # x = self.layer_norm1(x)
-        # x = self.drop_1(x)                
-        # x, _ = self.gru(x)        
-        # x = self.output(x)        
-
-        # x = x.permute(1, 0, 2)
-
-
-        src =x
-
-
-
-
-        # img_patches = self.img_embedding(src)
-        #src = [batch size, src len]
-        #trg = [batch size, trg len]
-                
-        # src_mask = self.make_src_mask(img_patches)
-        if trg_mask == None and trg is not None:
-            trg_mask = self.make_trg_mask(trg)
-        
-        #src_mask = [batch size, 1, 1, src len]
-        #trg_mask = [batch size, 1, trg len, trg len]
-        
-        enc_src = self.encoder(src, None)
-        
-        #enc_src = [batch size, src len, hid dim]
-        if is_inference == False:                
-            output, attention = self.decoder(trg, enc_src, trg_mask, None)
-        else:
-            return enc_src, None
-        #output = [batch size, trg len, output dim]
-        #attention = [batch size, n heads, trg len, src len]
-        
-        return output, attention
-
-def initialize_weights(m):
-    if hasattr(m, 'weight') and m.weight.dim() > 1:
-        nn.init.xavier_uniform_(m.weight.data)
-
 
 
 def train(model, data_loader, optimizer, criterion, clip):
@@ -151,13 +42,13 @@ def train(model, data_loader, optimizer, criterion, clip):
         # torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
         
         optimizer.step()
-        if step % 2 == 0:
+        if step % 50 == 0:
             print(f"Step {step}, loss:{loss.item()}")            
         epoch_loss += loss.item()
         step+=1
     return epoch_loss / len(data_loader)
 
-def evaluate(model, data_loader, criterion):
+def evaluate(model, data_loader, criterion, lbl_encoder=None):
     
     model.eval()
     
@@ -189,8 +80,16 @@ def evaluate(model, data_loader, criterion):
             #trg = [batch size * trg len - 1]
             
             loss = criterion(output, trg)
-            print(f"val loss {loss.item()}")
+            # print(f"val loss {loss.item()}")
             epoch_loss += loss.item()
+
+            for j in range(4):
+                img = src[j].unsqueeze(0)
+                lbl = data["raw_targets"][j]
+                lbl = lbl.replace("<", "")
+                lbl = lbl.replace(">", "")
+                res = predict(img, model, lbl_encoder, "cpu", 5, lbl)
+                pprint(f"{res}, {lbl}")
         
     return epoch_loss / len(data_loader)
 def epoch_time(start_time, end_time):
@@ -199,33 +98,3 @@ def epoch_time(start_time, end_time):
     elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
     return elapsed_mins, elapsed_secs
 
-def build_model(weight_path=None):
-    x = torch.rand((1, 3, 200,200))    
-    enc = Encoder(INPUT_DIM, 
-              HID_DIM, 
-              ENC_LAYERS, 
-              ENC_HEADS, 
-              ENC_PF_DIM, 
-              ENC_DROPOUT, 
-              DEVICE,
-              max_length=INPUT_DIM)
-
-    dec = Decoder(OUTPUT_DIM, 
-                HID_DIM, 
-                DEC_LAYERS, 
-                DEC_HEADS, 
-                DEC_PF_DIM, 
-                DEC_DROPOUT, 
-                DEVICE,
-                max_length=OUTPUT_DIM)
-
-    SRC_PAD_IDX = 0
-    TRG_PAD_IDX = 0    
-
-    model = Seq2Seq(enc, dec, SRC_PAD_IDX, TRG_PAD_IDX, DEVICE, img_size=IMAGE_WIDTH, embedding_size=HID_DIM).to(torch.device(DEVICE))
-    if weight_path is not None:
-        state_dict = torch.load(weight_path, map_location='cpu')
-        model.load_state_dict(state_dict)
-    else:
-        model.apply(initialize_weights)
-    return model

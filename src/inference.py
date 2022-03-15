@@ -1,6 +1,5 @@
 import torch
 import utils
-from model import build_model
 
 def predict(img, model, lbl_encoder, device = "cpu", max_len = 5, label=""):
     
@@ -36,15 +35,16 @@ def predict(img, model, lbl_encoder, device = "cpu", max_len = 5, label=""):
     return "".join(result)
 
 
-train_loader, test_loader, lbl_encoder, test_orig_targets = utils.prepare_data()
-model = build_model("/home/hung/learn/pytorch/captcha_trainsformer/weights/model_326.pt")
+if __name__ == "__main__":
+    train_loader, test_loader, lbl_encoder, test_orig_targets = utils.prepare_data()
+    model = utils.build_model("/home/hung/learn/pytorch/captcha_trainsformer/weights/model_20.pt")
 
 
-for bindex, data in enumerate(test_loader):
-    for j in range(8):
-        img = data["images"][j].unsqueeze(0)
-        lbl = data["raw_targets"][j]
-        lbl = lbl.replace("<", "")
-        lbl = lbl.replace(">", "")
-        res = predict(img, model, lbl_encoder, "cpu", 5, lbl)
-        print(f"{res}, {lbl}")
+    for bindex, data in enumerate(test_loader):
+        for j in range(8):
+            img = data["images"][j].unsqueeze(0)
+            lbl = data["raw_targets"][j]
+            lbl = lbl.replace("<", "")
+            lbl = lbl.replace(">", "")
+            res = predict(img, model, lbl_encoder, "cpu", 5, lbl)
+            print(f"{res}, {lbl}")

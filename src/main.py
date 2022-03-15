@@ -4,19 +4,18 @@ import numpy as np
 import os
 from encoderlayers import Encoder
 from decoderlayers import Decoder
-from model import Seq2Seq, initialize_weights, train, evaluate, epoch_time, build_model
+from model import train, evaluate, epoch_time
 from config import *
 import glob
-from sklearn import preprocessing, model_selection
-import dataset
 import time
 import math
 import utils
 
 train_loader, test_loader, lbl_encoder, test_orig_targets = utils.prepare_data()
-from_epoch = 326
+from_epoch = 47
 path=f"/home/hung/learn/pytorch/captcha_trainsformer/weights/model_{from_epoch}.pt"
-model = build_model(path)
+# path=None
+model = utils.build_model(path)
 
 optimizer = torch.optim.Adam(model.parameters(), lr = LEARNING_RATE)
 scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -32,7 +31,7 @@ for epoch in all_epochs:
     start_time = time.time()
     
     train_loss = train(model, train_loader, optimizer, criterion, CLIP)
-    valid_loss = evaluate(model, test_loader, criterion)
+    valid_loss = evaluate(model, test_loader, criterion, lbl_encoder)
     
     end_time = time.time()
     
