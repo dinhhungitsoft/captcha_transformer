@@ -167,8 +167,11 @@ def evaluate(model, data_loader, criterion):
         tk = tqdm(data_loader, total=len(data_loader))
         step = 0
         for data in tk:        
-            for k, v in data.items():        
+            for k, v in data.items(): 
+                if k == "raw_targets":
+                    continue
                 data[k] = v.to(DEVICE)
+                
             src = data["images"]        
             trg = data["targets"]  
 
