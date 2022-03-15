@@ -26,7 +26,7 @@ class Seq2Seq(nn.Module):
         self.max_pool_2 = nn.MaxPool2d(kernel_size=(2, 2))
         self.layer_norm1 = nn.LayerNorm(64)
 
-        self.linear_1 = nn.Linear(3200, embedding_size)
+        self.linear_1 = nn.Linear(768, embedding_size)
         # self.drop_1 = nn.Dropout(0.2)
         #        
         self.encoder = encoder

@@ -46,10 +46,10 @@ def prepare_data():
     (train_imgs, test_imgs, train_targets, test_targets, train_orig_targets, test_orig_targets) = model_selection.train_test_split(
         image_files, targets_enc, labels, test_size=0.1, random_state=42)
     
-    train_dataset = dataset.CaptchaDataset(train_imgs, train_targets, resize=(IMAGE_WIDTH, IMAGE_WIDTH))
+    train_dataset = dataset.CaptchaDataset(train_imgs, train_targets, resize=(IMAGE_HEIGHT, IMAGE_WIDTH ))
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
 
-    test_dataset = dataset.CaptchaDataset(test_imgs, test_targets, resize=(IMAGE_WIDTH, IMAGE_WIDTH))
+    test_dataset = dataset.CaptchaDataset(test_imgs, test_targets, resize=(IMAGE_HEIGHT, IMAGE_WIDTH ))
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=NUM_WORKERS)
 
     return train_loader, test_loader, lbl_encoder, test_orig_targets
@@ -88,7 +88,7 @@ def build_model(weight_path=None):
 train_loader, test_loader, lbl_encoder, test_orig_targets = prepare_data()
 
 
-model = build_model("/home/hung/learn/pytorch/captcha_trainsformer/weights/model_265.pt")
+model = build_model(None)
 
 optimizer = torch.optim.Adam(model.parameters(), lr = LEARNING_RATE)
 scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -97,7 +97,7 @@ scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(
 criterion = nn.CrossEntropyLoss()
 
 best_valid_loss = float('inf')
-from_epoch = 265
+from_epoch = 0
 all_epochs = range(N_EPOCHS)[from_epoch:]
 for epoch in all_epochs:
     

@@ -15,8 +15,8 @@ import random
 # torch.manual_seed(SEED)
 # torch.cuda.manual_seed(SEED)
 # torch.backends.cudnn.deterministic = True
-N_EPOCHS = 300
-LEARNING_RATE =1e-5
+N_EPOCHS = 100
+LEARNING_RATE =3e-4
 CLIP = 1
 # SRC = utils.SRC
 # TRG = utils.TRG

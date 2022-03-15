@@ -51,10 +51,10 @@ def prepare_data():
     (train_imgs, test_imgs, train_targets, test_targets, train_orig_targets, test_orig_targets) = model_selection.train_test_split(
         image_files, targets_enc, labels, test_size=0.1, random_state=42)
     
-    train_dataset = dataset.CaptchaDataset(train_imgs, train_targets, resize=(IMAGE_WIDTH, IMAGE_WIDTH))
+    train_dataset = dataset.CaptchaDataset(train_imgs, train_targets, resize=(IMAGE_HEIGHT, IMAGE_WIDTH))
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
 
-    test_dataset = dataset.CaptchaDataset(test_imgs, test_targets, test_orig_targets, resize=(IMAGE_WIDTH, IMAGE_WIDTH))
+    test_dataset = dataset.CaptchaDataset(test_imgs, test_targets, test_orig_targets, resize=(IMAGE_HEIGHT, IMAGE_WIDTH))
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=NUM_WORKERS)
 
     return train_loader, test_loader, lbl_encoder, test_orig_targets
@@ -109,10 +109,11 @@ def predict(img, model, lbl_encoder, device = "cpu", max_len = 5, label=""):
             for k in range(6 - len(L)):
                 L.append(0)   
             trg_tensor = torch.LongTensor(L).unsqueeze(0).to(device)
-            trg_mask = model.make_trg_mask(trg_tensor)
+            trg_mask = model.make_src_mask(trg_tensor)
             output, _ = model.decoder( trg_tensor, encoded,trg_mask = trg_mask, src_mask=None)
             predicted = output.argmax(2)
-            predicted = predicted[:,2].item()
+            idx = L.index(0) - 1
+            predicted = predicted[:,idx].item()
 
             predicts.append(predicted)
             L = predicts.copy()
@@ -128,7 +129,7 @@ def predict(img, model, lbl_encoder, device = "cpu", max_len = 5, label=""):
 
 
 train_loader, test_loader, lbl_encoder, test_orig_targets = prepare_data()
-model = build_model("/home/hung/learn/pytorch/captcha_trainsformer/weights/model_264.pt")
+model = build_model("/home/hung/learn/pytorch/captcha_trainsformer/weights/model_49.pt")
 
 # data = next(iter(test_loader))
 
