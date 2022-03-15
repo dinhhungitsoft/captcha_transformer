@@ -15,8 +15,8 @@ import random
 # torch.manual_seed(SEED)
 # torch.cuda.manual_seed(SEED)
 # torch.backends.cudnn.deterministic = True
-N_EPOCHS = 100
-LEARNING_RATE =3e-4
+N_EPOCHS = 400
+LEARNING_RATE =1e-4
 CLIP = 1
 # SRC = utils.SRC
 # TRG = utils.TRG
@@ -29,13 +29,13 @@ ENC_HEADS = 4
 DEC_HEADS = 4
 ENC_PF_DIM = 512
 DEC_PF_DIM = 512
-ENC_DROPOUT = 0.1
-DEC_DROPOUT = 0.1
+ENC_DROPOUT = 0.2
+DEC_DROPOUT = 0.2
 
 DATA_DIR = "/home/hung/learn/pytorch/captcha_trainsformer/data/captcha_images_v2"
 BATCH_SIZE = 8
 IMAGE_WIDTH = 200
-IMAGE_HEIGHT = 50
+IMAGE_HEIGHT = 200
 NUM_WORKERS = 4
 EPOCH = 200
 DEVICE = "cpu"

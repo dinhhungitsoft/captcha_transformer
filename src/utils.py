@@ -1,70 +1,48 @@
-# from numpy import dtype
-# import torch
-# import numpy as np
-# from sklearn import preprocessing
-# from PIL import Image, ImageFile
-# import config
-# import albumentations
+import spacy
+import torch
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import torch
+import torch.nn as nn
+import numpy as np
+import os
+from encoderlayers import Encoder
+from decoderlayers import Decoder
+from config import *
+import glob
+from sklearn import preprocessing, model_selection
+import dataset
+import time
+import math
 
-# def remove_duplicates(x):
-#     if len(x) < 2:
-#         return x
-#     fin = ""
-#     for j in x:
-#         if fin == "":
-#             fin = j
-#         else:
-#             if j == fin[-1]:
-#                 continue
-#             else:
-#                 fin = fin + j
-#     return fin
-
-# def decode_prediction(preds, encoder, keep_raw=False):
-#     preds = preds.permute(1, 0, 2)
-#     preds = torch.softmax(preds, 2)
-#     preds = torch.argmax(preds, 2)
-#     preds = preds.detach().cpu().numpy()
-
-#     cap_preds = []
-#     for j in range(preds.shape[0]):
-#         temp=[]
-#         for k in preds[j, :]:
-#             k = k - 1
-#             if k == -1:
-#                 temp.append("^")
-#             else:
-#                 temp.append(encoder.inverse_transform([k])[0])
-        
-#         tp = "".join(temp)
-
-#         if not keep_raw:
-#             tp = remove_duplicates(tp).replace("^","")
-#         cap_preds.append(tp)
-#     return cap_preds
-
-# def infer(img_path, model):
-#     ImageFile.LOAD_TRUNCATED_IMAGES = True
-#     image = Image.open(img_path).convert("RGB").resize((config.IMAGE_WIDTH, config.IMAGE_HEIGHT), resample=Image.BILINEAR)
-#     image = np.array(image)
-#     augmented = albumentations.Normalize(always_apply=True)(image=image)
-#     image = augmented["image"]
-#     image = np.transpose(image, (2,0,1)).astype(np.float32)
-#     image = torch.tensor(image, dtype=torch.float32).unsqueeze(0)
-
-#     abc = model(image)
-
-# def get_lbl_encoder():
-#     all_chars =  list(np.arange(ord("a") , ord("z") + 1))
-#     all_chars.extend(list(np.arange(ord("A") , ord("Z") + 1)))
-#     all_chars.extend(list(np.arange(ord("1") , ord("9") + 1)))
-#     all_chars = [chr(c) for c in all_chars]
-
-#     lbl_encoder = preprocessing.LabelEncoder()
-#     lbl_encoder.fit(all_chars)
-#     return lbl_encoder
-
-# if __name__=="__main__":
-#    s = remove_duplicates("^^^^^^^^^^4^^^^y^^^^^c^^^^8^^^^5^^^^^^^^^^^^^^^^^^")
-#    print(s)
+def prepare_data():    
+    image_files = glob.glob(os.path.join(DATA_DIR, "*.png"))
    
+    labels = [x.split("/")[-1][:-4] for x in image_files]
+    labels = [f"<{l}>" for l in labels]
+    
+    targets = [[c for c in x] for x in labels]
+    targets_flat = [c for clist in targets for c in clist]
+    
+    targets_flat.append(' ')
+
+    lbl_encoder = preprocessing.LabelEncoder()
+    lbl_encoder.fit(targets_flat)
+    targets_enc = [lbl_encoder.transform(x) for x in targets]
+    targets_enc = np.array(targets_enc)     
+
+    sos_token_idx = lbl_encoder.transform(["<"])
+    eos_token_idx = lbl_encoder.transform([">"])
+    blank = lbl_encoder.transform([" "])
+    vocab_size = lbl_encoder.classes_
+
+    (train_imgs, test_imgs, train_targets, test_targets, train_orig_targets, test_orig_targets) = model_selection.train_test_split(
+        image_files, targets_enc, labels, test_size=0.1, random_state=42)
+    
+    train_dataset = dataset.CaptchaDataset(train_imgs, train_targets, resize=(IMAGE_HEIGHT, IMAGE_WIDTH))
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
+
+    test_dataset = dataset.CaptchaDataset(test_imgs, test_targets, test_orig_targets, resize=(IMAGE_HEIGHT, IMAGE_WIDTH))
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=NUM_WORKERS)
+
+    return train_loader, test_loader, lbl_encoder, test_orig_targets

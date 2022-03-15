@@ -2,9 +2,8 @@ import torch.nn as nn
 import torch
 from encoderlayers import Encoder, EncoderLayer
 from decoderlayers import Decoder, DecoderLayer
-import utils
 from tqdm import tqdm
-import config
+from config import *
 
 import torch.nn.functional as F
 
@@ -26,7 +25,7 @@ class Seq2Seq(nn.Module):
         self.max_pool_2 = nn.MaxPool2d(kernel_size=(2, 2))
         self.layer_norm1 = nn.LayerNorm(64)
 
-        self.linear_1 = nn.Linear(768, embedding_size)
+        self.linear_1 = nn.Linear(3200, embedding_size)
         # self.drop_1 = nn.Dropout(0.2)
         #        
         self.encoder = encoder
@@ -126,7 +125,7 @@ def train(model, data_loader, optimizer, criterion, clip):
     step = 0
     for data in tk:
         for k, v in data.items():        
-            data[k] = v.to(config.DEVICE)
+            data[k] = v.to(DEVICE)
         
         optimizer.zero_grad()
         src = data["images"]        
@@ -169,7 +168,7 @@ def evaluate(model, data_loader, criterion):
         step = 0
         for data in tk:        
             for k, v in data.items():        
-                data[k] = v.to(config.DEVICE)
+                data[k] = v.to(DEVICE)
             src = data["images"]        
             trg = data["targets"]  
 
@@ -197,3 +196,33 @@ def epoch_time(start_time, end_time):
     elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
     return elapsed_mins, elapsed_secs
 
+def build_model(weight_path=None):
+    x = torch.rand((1, 3, 200,200))    
+    enc = Encoder(INPUT_DIM, 
+              HID_DIM, 
+              ENC_LAYERS, 
+              ENC_HEADS, 
+              ENC_PF_DIM, 
+              ENC_DROPOUT, 
+              DEVICE,
+              max_length=INPUT_DIM)
+
+    dec = Decoder(OUTPUT_DIM, 
+                HID_DIM, 
+                DEC_LAYERS, 
+                DEC_HEADS, 
+                DEC_PF_DIM, 
+                DEC_DROPOUT, 
+                DEVICE,
+                max_length=OUTPUT_DIM)
+
+    SRC_PAD_IDX = 0
+    TRG_PAD_IDX = 0    
+
+    model = Seq2Seq(enc, dec, SRC_PAD_IDX, TRG_PAD_IDX, DEVICE, img_size=IMAGE_WIDTH, embedding_size=HID_DIM).to(torch.device(DEVICE))
+    if weight_path is not None:
+        state_dict = torch.load(weight_path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    else:
+        model.apply(initialize_weights)
+    return model
