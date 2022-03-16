@@ -7,9 +7,7 @@ def predict(img, model, lbl_encoder, device = "cpu", max_len = 5, label=""):
     model.eval()
     with torch.no_grad():
         encoded,_ = model(img, None, trg_mask = None, is_inference=True)        
-        
-    L = [lbl_encoder.transform(["<"])[0]]   
-    
+            
     predicts = [lbl_encoder.transform(["<"])[0]]
 
     result = []
@@ -21,7 +19,7 @@ def predict(img, model, lbl_encoder, device = "cpu", max_len = 5, label=""):
             trg_tensor = torch.LongTensor(predicts).unsqueeze(0).to(device)
             trg_mask = model.make_trg_mask(trg_tensor)
             # trg_mask=None
-            output, _ = model.decoder( trg_tensor, encoded,trg_mask = trg_mask, src_mask=None)
+            output, att = model.decoder( trg_tensor, encoded,trg_mask = trg_mask, src_mask=None)
             predicted = output.argmax(2)
             # idx = L.index(0) - 1
             idx=-1
@@ -34,22 +32,23 @@ def predict(img, model, lbl_encoder, device = "cpu", max_len = 5, label=""):
             eos = lbl_encoder.transform([">"])[0]
             if predicted == eos:
                 break
-    return "".join(result)
+    return "".join(result), att
 
 
-train_loader, test_loader, lbl_encoder, test_orig_targets = utils.prepare_data()
-model = build_model("/home/hung/learn/pytorch/captcha_trainsformer/weights/model_326.pt")
-print(model)
-d = 0
-for bindex, data in enumerate(test_loader):
+# train_loader, test_loader, lbl_encoder, test_orig_targets = utils.prepare_data()
+# model = build_model("/home/hung/learn/pytorch/captcha_trainsformer/weights/model_326.pt")
+# print(model)
+# d = 0
+
+# for bindex, data in enumerate(test_loader):
     
-    for j in range(8):
-        img = data["images"][j].unsqueeze(0)
-        lbl = data["raw_targets"][j]
-        lbl = lbl.replace("<", "")
-        lbl = lbl.replace(">", "")
-        res = predict(img, model, lbl_encoder, "cpu", 5, lbl)
-        print(f"{res}, {lbl}")
-        if res != lbl:
-            d+=1
-print(f"False predict {d}")    
+#     for j in range(1):
+#         img = data["images"][j].unsqueeze(0)
+#         lbl = data["raw_targets"][j]
+#         lbl = lbl.replace("<", "")
+#         lbl = lbl.replace(">", "")
+#         res, att = predict(img, model, lbl_encoder, "cpu", 5, lbl)        
+#         print(f"{res}, {lbl}")
+#         if res != lbl:
+#             d+=1
+# print(f"False predict {d}")    

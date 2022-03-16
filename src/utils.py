@@ -43,6 +43,30 @@ def prepare_data():
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
 
     test_dataset = dataset.CaptchaDataset(test_imgs, test_targets, test_orig_targets, resize=(IMAGE_HEIGHT, IMAGE_WIDTH))
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=NUM_WORKERS)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=NUM_WORKERS)
 
     return train_loader, test_loader, lbl_encoder, test_orig_targets
+
+def display_attention(predicted, attention, n_heads = 4, n_rows = 2, n_cols = 2):
+    
+    assert n_rows * n_cols == n_heads
+    
+    fig = plt.figure(figsize=(5,25))
+    
+    for i in range(n_heads):
+        
+        ax = fig.add_subplot(n_rows, n_cols, i+1)
+        
+        _attention = attention.squeeze(0)[i].cpu().detach().numpy()
+
+        cax = ax.matshow(_attention, cmap='bone')
+
+        ax.tick_params(labelsize=10)
+        # ax.set_xticklabels([" " for i in range(10)], rotation=45)
+        ax.set_yticklabels([s for s in predicted], rotation=0)
+
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+        ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
+    
+    plt.show()
+    plt.close()
