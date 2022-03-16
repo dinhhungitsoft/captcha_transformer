@@ -73,3 +73,14 @@ class MultiHeadAttentionLayer(nn.Module):
         #x = [batch size, query len, hid dim]
         
         return x, attention
+
+
+if __name__ == "__main__":
+    import mask
+    layer = MultiHeadAttentionLayer(hid_dim=64, n_heads=1, dropout= 0.1,device= "cpu")
+
+    tensor = torch.rand((1, 3, 64))    
+    
+    lh_mask = mask.look_ahead_mask(tensor)
+    out = layer(query=tensor, key=tensor, value=tensor, mask=lh_mask)
+    print(out)    
